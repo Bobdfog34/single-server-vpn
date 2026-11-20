@@ -25,7 +25,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationView {
             VStack(spacing: 28) {
                 VStack(spacing: 8) {
                     Circle()
