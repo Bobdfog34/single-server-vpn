@@ -1,0 +1,61 @@
+name: SingleServerVPN
+options:
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    APP_GROUP_ID: group.com.singleserver.vpn
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: ""
+    PROVISIONING_PROFILE_SPECIFIER: ""
+    DEVELOPMENT_TEAM: ""
+    SWIFT_VERSION: "5.0"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_UILaunchScreen_Generation: YES
+    INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+    TARGETED_DEVICE_FAMILY: "1,2"
+    ENABLE_BITCODE: NO
+    COMPILER_INDEX_STORE_ENABLE: NO
+packages:
+  SwiftyXrayKit:
+    url: https://github.com/dima-u/SwiftyXrayKit.git
+    from: "1.1.0"
+targets:
+  SingleServerVPN:
+    type: application
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.singleserver.vpn
+        INFOPLIST_KEY_CFBundleDisplayName: Single Server VPN
+    sources:
+      - path: Sources/App
+      - path: Sources/Shared
+    resources:
+      - path: Sources/Shared/Resources
+      - path: Resources/Assets.xcassets
+    entitlements:
+      path: Sources/App/SingleServerVPN.entitlements
+    dependencies:
+      - target: SingleServerVPNExtension
+        embed: true
+  SingleServerVPNExtension:
+    type: app-extension
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.singleserver.vpn.tunnel
+    sources:
+      - path: Sources/PacketTunnel
+      - path: Sources/Shared
+    resources:
+      - path: Sources/Shared/Resources
+    entitlements:
+      path: Sources/PacketTunnel/SingleServerVPNExtension.entitlements
+    info:
+      properties:
+        CFBundleDisplayName: Single Server VPN Tunnel
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
