@@ -12,6 +12,8 @@ settings:
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleShortVersionString: "1.0"
+    INFOPLIST_KEY_CFBundleVersion: "1"
     INFOPLIST_KEY_UILaunchScreen_Generation: YES
     INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
     TARGETED_DEVICE_FAMILY: "1,2"
@@ -70,6 +72,8 @@ targets:
       path: Sources/PacketTunnel/Info.plist
       properties:
         CFBundleDisplayName: Single Server VPN Tunnel
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
