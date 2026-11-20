@@ -20,7 +20,7 @@ settings:
 packages:
   SwiftyXrayKit:
     url: https://github.com/dima-u/SwiftyXrayKit.git
-    from: "1.1.0"
+    from: "2.0.0"
 targets:
   SingleServerVPN:
     type: application
