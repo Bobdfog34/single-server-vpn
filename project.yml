@@ -37,6 +37,11 @@ targets:
       - path: Resources/Assets.xcassets
     entitlements:
       path: Sources/App/SingleServerVPN.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(APP_GROUP_ID)
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
     dependencies:
       - target: SingleServerVPNExtension
         embed: true
@@ -46,6 +51,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.singleserver.vpn.tunnel
+        GENERATE_INFOPLIST_FILE: NO
     sources:
       - path: Sources/PacketTunnel
       - path: Sources/Shared
@@ -53,7 +59,13 @@ targets:
       - path: Sources/Shared/Resources
     entitlements:
       path: Sources/PacketTunnel/SingleServerVPNExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - $(APP_GROUP_ID)
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
     info:
+      path: Sources/PacketTunnel/Info.plist
       properties:
         CFBundleDisplayName: Single Server VPN Tunnel
         NSExtension:
