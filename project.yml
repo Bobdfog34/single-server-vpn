@@ -57,6 +57,8 @@ targets:
       - path: Sources/Shared
     resources:
       - path: Sources/Shared/Resources
+    dependencies:
+      - package: SwiftyXrayKit
     entitlements:
       path: Sources/PacketTunnel/SingleServerVPNExtension.entitlements
       properties:
