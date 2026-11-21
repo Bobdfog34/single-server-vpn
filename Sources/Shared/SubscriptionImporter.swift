@@ -71,7 +71,8 @@ enum SubscriptionImporter {
         }
 
         let query = queryMap(components)
-        let port = Int(query["port"] ?? components.port ?? "") ?? 443
+        let portString = query["port"] ?? components.port.map(String.init) ?? ""
+        let port = Int(portString) ?? 443
         let name = components.fragment?.removingPercentEncoding ?? host
 
         let user: [String: Any] = [
