@@ -4,6 +4,7 @@ import NetworkExtension
 struct ContentView: View {
     @StateObject private var vpn = VPNManager()
     @StateObject private var geo = GeoDownloadManager()
+    @StateObject private var updater = UpdateManager()
     @State private var showSettings = false
 
     private enum Palette {
@@ -67,7 +68,9 @@ struct ContentView: View {
                         statusCard
                         detailsCard
                         geoCard
+                        updateCard
                         connectButton
+                        diagnosticsCard
 
                         if let error = vpn.lastError {
                             Text(error)
@@ -97,7 +100,11 @@ struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView().environmentObject(vpn)
             }
-            .onAppear { geo.refresh() }
+            .onAppear {
+                geo.refresh()
+                vpn.refreshDiagnostics()
+                Task { await updater.check() }
+            }
         }
     }
 
@@ -227,6 +234,110 @@ struct ContentView: View {
         }
         .padding(16)
         .background(cardBackground())
+    }
+
+    private var updateCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Обновление", systemImage: "arrow.triangle.2.circlepath")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.white)
+
+                Spacer()
+
+                Text(updater.updateAvailable ? "Есть новая" : (updater.latestVersion == nil ? "—" : "Актуально"))
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(updater.updateAvailable ? Color.orange.opacity(0.18) : Color.white.opacity(0.10)))
+                    .foregroundStyle(updater.updateAvailable ? Color.orange : Color.white.opacity(0.65))
+            }
+
+            Text("Текущая \(updater.currentVersion) • последняя \(updater.latestVersion ?? "не проверена")")
+                .font(.footnote)
+                .foregroundStyle(Color.white.opacity(0.62))
+
+            HStack(spacing: 10) {
+                Button {
+                    Task { await updater.check() }
+                } label: {
+                    HStack(spacing: 8) {
+                        if updater.isChecking {
+                            ProgressView()
+                                .tint(Color.white)
+                        }
+                        Text(updater.isChecking ? "Проверяем…" : "Проверить")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+                .tint(Palette.accent)
+                .disabled(updater.isChecking || isBusy)
+
+                if updater.updateAvailable, let url = updater.downloadURL {
+                    Link(destination: url) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.down.to.line.circle.fill")
+                            Text("Скачать")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Palette.accent)
+                }
+
+                Link(destination: AppIdentity.releasesPageURL) {
+                    Text("Все версии")
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+                .tint(Palette.accentSecondary)
+            }
+
+            if let error = updater.lastError {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(Color.red.opacity(0.9))
+                    .textSelection(.enabled)
+            }
+        }
+        .padding(16)
+        .background(cardBackground())
+    }
+
+    @ViewBuilder
+    private var diagnosticsCard: some View {
+        if let log = vpn.tunnelLog {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Диагностика туннеля", systemImage: "doc.text.magnifyingglass")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.white)
+
+                Text(log)
+                    .font(.system(size: 10, design: .monospaced))
+                    .foregroundStyle(Color.white.opacity(0.70))
+                    .lineLimit(8)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    vpn.refreshDiagnostics()
+                } label: {
+                    Label("Обновить логи", systemImage: "arrow.clockwise")
+                        .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(Palette.accentSecondary)
+            }
+            .padding(16)
+            .background(cardBackground())
+        }
     }
 
     private var connectButton: some View {

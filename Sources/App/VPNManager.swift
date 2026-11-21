@@ -5,6 +5,7 @@ import NetworkExtension
 final class VPNManager: ObservableObject {
     @Published private(set) var status: NEVPNStatus = .disconnected
     @Published private(set) var lastError: String?
+    @Published private(set) var tunnelLog: String?
 
     private var manager: NETunnelProviderManager?
     private var observer: NSObjectProtocol?
@@ -19,9 +20,13 @@ final class VPNManager: ObservableObject {
             let newStatus = session.status
             Task { @MainActor in
                 self?.status = newStatus
+                self?.refreshDiagnostics()
             }
         }
-        Task { await load() }
+        Task {
+            await load()
+            refreshDiagnostics()
+        }
     }
 
     deinit {
@@ -70,10 +75,12 @@ final class VPNManager: ObservableObject {
                 try await current.loadFromPreferences()
             }
             manager = current
+            TunnelDiagnostics.log("App: connect requested")
             try current.connection.startVPNTunnel()
             status = current.connection.status
         } catch {
             lastError = message(for: error)
+            TunnelDiagnostics.log("App connect failed: \(lastError ?? String(describing: error))")
         }
     }
 
@@ -91,5 +98,10 @@ final class VPNManager: ObservableObject {
 
     func clearError() {
         lastError = nil
+    }
+
+    func refreshDiagnostics() {
+        let log = TunnelDiagnostics.recent()
+        tunnelLog = log.isEmpty ? nil : log
     }
 }
