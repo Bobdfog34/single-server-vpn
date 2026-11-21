@@ -3,6 +3,7 @@ import NetworkExtension
 
 struct ContentView: View {
     @StateObject private var vpn = VPNManager()
+    @StateObject private var geo = GeoDownloadManager()
 
     private var isConnected: Bool {
         vpn.status == .connected
@@ -50,6 +51,36 @@ struct ContentView: View {
                 .padding()
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
 
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Geo databases", systemImage: "globe")
+                    Text(geo.isDownloaded ? "Downloaded" : "Not downloaded")
+                        .font(.footnote)
+                        .foregroundStyle(geo.isDownloaded ? Color.green : Color.secondary)
+
+                    if geo.isDownloading {
+                        ProgressView(value: geo.progress)
+                        Text("Downloading \(Int(geo.progress * 100))%")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button("Download geo") {
+                            Task { await geo.download() }
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(isBusy)
+                    }
+
+                    if let error = geo.lastError {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+
                 if let error = vpn.lastError {
                     Text(error)
                         .font(.footnote)
@@ -71,12 +102,13 @@ struct ContentView: View {
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isBusy)
+                .disabled(isBusy || geo.isDownloading)
                 .padding(.horizontal)
 
                 Spacer()
             }
             .navigationTitle(AppIdentity.displayName)
+            .onAppear { geo.refresh() }
         }
     }
 }

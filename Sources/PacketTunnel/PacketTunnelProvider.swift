@@ -22,9 +22,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         }
 
         do {
-            let base = AppGroup.containerURL
-                ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let dataDir = base.appendingPathComponent("xray", isDirectory: true)
+            let dataDir = AppGroup.xrayDataURL
             try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
             let finalConfig = dataDir.appendingPathComponent("config.json")
 
