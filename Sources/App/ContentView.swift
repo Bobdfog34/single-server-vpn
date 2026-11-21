@@ -6,6 +6,7 @@ struct ContentView: View {
     @StateObject private var geo = GeoDownloadManager()
     @StateObject private var updater = UpdateManager()
     @State private var showSettings = false
+    @State private var shareFile: IdentifiableFile?
 
     private enum Palette {
         static let top = Color(red: 0.04, green: 0.06, blue: 0.16)
@@ -99,6 +100,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView().environmentObject(vpn)
+            }
+            .sheet(item: $shareFile) { item in
+                ShareSheet(item: item.url)
             }
             .onAppear {
                 geo.refresh()
@@ -274,9 +278,32 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(Palette.accent)
-                .disabled(updater.isChecking || isBusy)
+                .disabled(updater.isChecking || updater.isDownloading || isBusy)
 
-                if updater.updateAvailable, let url = updater.downloadURL {
+                if updater.isDownloading {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .tint(Color.white)
+                        Text("Скачиваю…")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                } else if let file = updater.downloadedFileURL {
+                    Button {
+                        shareFile = IdentifiableFile(url: file)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.up.fill")
+                            Text("Открыть файл")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Palette.accent)
+                } else if updater.updateAvailable, let url = updater.downloadURL {
                     Link(destination: url) {
                         HStack(spacing: 8) {
                             Image(systemName: "arrow.down.to.line.circle.fill")
@@ -298,6 +325,13 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(Palette.accentSecondary)
+            }
+
+            if let status = updater.statusMessage {
+                Text(status)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(updater.downloadedFileURL == nil ? Color.white.opacity(0.65) : Color.green)
+                    .textSelection(.enabled)
             }
 
             if let error = updater.lastError {

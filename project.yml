@@ -12,8 +12,9 @@ settings:
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.0"
     GENERATE_INFOPLIST_FILE: NO
-    MARKETING_VERSION: "1.1.2"
-    CURRENT_PROJECT_VERSION: "4"
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    MARKETING_VERSION: "1.1.3"
+    CURRENT_PROJECT_VERSION: "5"
     TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_BITCODE: NO
     COMPILER_INDEX_STORE_ENABLE: NO
@@ -32,8 +33,8 @@ targets:
       - path: Sources/App
       - path: Sources/Shared
     resources:
+      - path: Sources/Shared/Resources/Assets.xcassets
       - path: Sources/Shared/Resources
-      - path: Resources/AppIcon.png
     entitlements:
       path: Sources/App/SingleServerVPN.entitlements
       properties:
@@ -44,22 +45,12 @@ targets:
     info:
       path: Sources/App/Info.plist
     postBuildScripts:
-      - name: Ensure explicit app icon
+      - name: Set packaged version
         script: |
           set -e
-          cp "$SRCROOT/Resources/AppIcon.png" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/AppIcon.png"
           PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1.2" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 4" "$PLIST"
-          /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "$PLIST" >/dev/null 2>&1 || true
-          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon.png" "$PLIST"
-          for KEY in CFBundleIcons "CFBundleIcons~ipad"; do
-            /usr/libexec/PlistBuddy -c "Delete :$KEY" "$PLIST" >/dev/null 2>&1 || true
-            /usr/libexec/PlistBuddy -c "Add :$KEY dict" "$PLIST"
-            /usr/libexec/PlistBuddy -c "Add :$KEY:CFBundlePrimaryIcon dict" "$PLIST"
-            /usr/libexec/PlistBuddy -c "Add :$KEY:CFBundlePrimaryIcon:CFBundleIconFiles array" "$PLIST"
-            /usr/libexec/PlistBuddy -c "Add :$KEY:CFBundlePrimaryIcon:CFBundleIconFiles:0 string AppIcon.png" "$PLIST"
-          done
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1.3" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 5" "$PLIST"
     dependencies:
       - target: SingleServerVPNExtension
         embed: true
@@ -88,8 +79,8 @@ targets:
       path: Sources/PacketTunnel/Info.plist
       properties:
         CFBundleDisplayName: Single Server VPN Tunnel
-        CFBundleShortVersionString: "1.1.2"
-        CFBundleVersion: "4"
+        CFBundleShortVersionString: "1.1.3"
+        CFBundleVersion: "5"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider

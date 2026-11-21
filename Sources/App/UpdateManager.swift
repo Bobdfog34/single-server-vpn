@@ -6,7 +6,11 @@ final class UpdateManager: ObservableObject {
     @Published private(set) var latestVersion: String?
     @Published private(set) var downloadURL: URL? = AppIdentity.releaseAssetURL
     @Published private(set) var isChecking = false
+    @Published private(set) var isDownloading = false
     @Published private(set) var updateAvailable = false
+    @Published private(set) var downloadedFileURL: URL?
+    @Published private(set) var downloadedVersion: String?
+    @Published private(set) var statusMessage: String?
     @Published private(set) var lastError: String?
 
     private struct Release: Decodable {
@@ -35,7 +39,7 @@ final class UpdateManager: ObservableObject {
         currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
-    func check() async {
+    func check(autoDownload: Bool = true) async {
         isChecking = true
         lastError = nil
         defer { isChecking = false }
@@ -64,10 +68,62 @@ final class UpdateManager: ObservableObject {
                 .first(where: { $0.name == "SingleServerVPN-unsigned.ipa" })?
                 .browser_download_url ?? AppIdentity.releaseAssetURL
             updateAvailable = Self.compare(latestVersion ?? "", currentVersion) > 0
+
+            if let latestVersion, let existing = Self.existingDownload(for: latestVersion) {
+                downloadedFileURL = existing
+                downloadedVersion = latestVersion
+                statusMessage = "Обновление \(latestVersion) уже скачано"
+            }
+
+            if autoDownload && updateAvailable && downloadedFileURL == nil {
+                await downloadUpdate()
+            }
         } catch {
             lastError = error.localizedDescription
             updateAvailable = false
         }
+    }
+
+    func downloadUpdate() async {
+        guard let url = downloadURL, let version = latestVersion else { return }
+        guard !isDownloading else { return }
+
+        isDownloading = true
+        statusMessage = "Скачиваю обновление \(version)…"
+        lastError = nil
+        defer { isDownloading = false }
+
+        do {
+            guard let updatesDir = try? Self.updatesDirectory() else {
+                throw UpdateError.noReleases
+            }
+            let destination = updatesDir.appendingPathComponent("SingleServerVPN-\(version).ipa")
+            try? FileManager.default.removeItem(at: destination)
+
+            let (temporaryURL, _) = try await URLSession.shared.download(from: url)
+            try FileManager.default.moveItem(at: temporaryURL, to: destination)
+
+            downloadedFileURL = destination
+            downloadedVersion = version
+            statusMessage = "Обновление \(version) скачано. Поделитесь файлом, чтобы установить."
+        } catch {
+            lastError = error.localizedDescription
+            statusMessage = "Не удалось скачать обновление"
+        }
+    }
+
+    private static func updatesDirectory() throws -> URL {
+        let base = AppGroup.containerURL
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let directory = base.appendingPathComponent("Updates", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    private static func existingDownload(for version: String) -> URL? {
+        guard let directory = try? updatesDirectory() else { return nil }
+        let file = directory.appendingPathComponent("SingleServerVPN-\(version).ipa")
+        return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
     private static func normalize(_ value: String) -> String {
