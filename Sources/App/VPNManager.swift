@@ -31,8 +31,12 @@ final class VPNManager: ObservableObject {
     func load() async {
         do {
             let all = try await NETunnelProviderManager.loadAllFromPreferences()
-            let existing = all.first { $0.protocolConfiguration is NETunnelProviderProtocol }
-            if let existing {
+            if var existing = all.first(where: { $0.protocolConfiguration is NETunnelProviderProtocol }) {
+                if !existing.isEnabled {
+                    existing.isEnabled = true
+                    try await existing.saveToPreferences()
+                    try await existing.loadFromPreferences()
+                }
                 manager = existing
                 status = existing.connection.status
                 return
@@ -51,20 +55,34 @@ final class VPNManager: ObservableObject {
             manager = created
             status = created.connection.status
         } catch {
-            lastError = String(describing: error)
+            lastError = message(for: error)
         }
     }
 
     func connect() async {
         do {
             if manager == nil { await load() }
-            guard let manager else { return }
-            try await manager.loadFromPreferences()
-            try manager.connection.startVPNTunnel()
-            status = manager.connection.status
+            guard var current = manager else { return }
+            try await current.loadFromPreferences()
+            if !current.isEnabled {
+                current.isEnabled = true
+                try await current.saveToPreferences()
+                try await current.loadFromPreferences()
+            }
+            manager = current
+            try current.connection.startVPNTunnel()
+            status = current.connection.status
         } catch {
-            lastError = String(describing: error)
+            lastError = message(for: error)
         }
+    }
+
+    private func message(for error: Error) -> String {
+        if let vpnError = error as? NEVPNError,
+           vpnError.code == .configurationDisabled {
+            return "VPN configuration is disabled. Enable it in Settings → General → VPN & Device Management."
+        }
+        return String(describing: error)
     }
 
     func disconnect() {
