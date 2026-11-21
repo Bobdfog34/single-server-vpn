@@ -6,3 +6,4 @@ DerivedData/
 *.ipa
 build.log
 *.xcuserstate
+artifacts/
