@@ -16,7 +16,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
     private var bridge: XrayBridge?
 
     override func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
-        guard let config = EmbeddedConfig.string else {
+        let preferences = VPNConfigurationStore.loadPreferences()
+        let profiles = VPNConfigurationStore.loadProfiles()
+        let activeProfile = VPNConfigurationStore.activeProfile(preferences: preferences, profiles: profiles)
+
+        guard let config = activeProfile?.configJSON ?? EmbeddedConfig.string else {
             completionHandler(TunnelError.missingConfig)
             return
         }
@@ -25,8 +29,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
             let dataDir = AppGroup.xrayDataURL
             try FileManager.default.createDirectory(at: dataDir, withIntermediateDirectories: true)
             let finalConfig = dataDir.appendingPathComponent("config.json")
+            let remoteAddress = activeProfile?.serverAddress ?? AppIdentity.serverAddress
 
-            setTunnelNetworkSettings(makeNetworkSettings()) { [weak self] settingsError in
+            setTunnelNetworkSettings(makeNetworkSettings(remoteAddress: remoteAddress, preferences: preferences)) { [weak self] settingsError in
                 guard let self else {
                     completionHandler(settingsError)
                     return
@@ -44,14 +49,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
                         preset: .mobile,
                         configTransform: { config in
                             var result = config
-                            guard var inbounds = result["inbounds"] as? [[String: Any]],
-                                  !inbounds.isEmpty else { return result }
-                            inbounds[0]["sniffing"] = [
-                                "enabled": true,
-                                "routeOnly": false,
-                                "destOverride": ["http", "tls", "quic"]
-                            ]
-                            result["inbounds"] = inbounds
+                            Self.applyPreferences(to: &result, preferences: preferences)
                             return result
                         },
                         traceHandle: { message in
@@ -75,18 +73,54 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         completionHandler()
     }
 
-    private func makeNetworkSettings() -> NEPacketTunnelNetworkSettings {
-        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: AppIdentity.serverAddress)
-        settings.mtu = 1360
+    private func makeNetworkSettings(remoteAddress: String, preferences: VPNPreferences) -> NEPacketTunnelNetworkSettings {
+        let settings = NEPacketTunnelNetworkSettings(tunnelRemoteAddress: remoteAddress)
+        settings.mtu = NSNumber(value: preferences.mtu)
 
         let ipv4 = NEIPv4Settings(addresses: ["10.131.0.2"], subnetMasks: ["255.255.255.252"])
         ipv4.includedRoutes = [NEIPv4Route.default()]
         settings.ipv4Settings = ipv4
 
-        let dns = NEDNSSettings(servers: ["1.1.1.1", "1.0.0.1"])
+        let servers = preferences.dnsServers.isEmpty ? ["1.1.1.1", "1.0.0.1"] : preferences.dnsServers
+        let dns = NEDNSSettings(servers: servers)
         dns.matchDomains = [""]
         settings.dnsSettings = dns
 
         return settings
+    }
+
+    private static func applyPreferences(to config: inout [String: Any], preferences: VPNPreferences) {
+        var dns = config["dns"] as? [String: Any] ?? [:]
+        dns["servers"] = preferences.dnsServers.isEmpty ? ["1.1.1.1", "1.0.0.1"] : preferences.dnsServers
+        config["dns"] = dns
+
+        if var inbounds = config["inbounds"] as? [[String: Any]], !inbounds.isEmpty {
+            if preferences.sniffingEnabled {
+                inbounds[0]["sniffing"] = [
+                    "enabled": true,
+                    "routeOnly": false,
+                    "destOverride": ["http", "tls", "quic"]
+                ]
+            } else {
+                inbounds[0].removeValue(forKey: "sniffing")
+            }
+            config["inbounds"] = inbounds
+        }
+
+        guard !preferences.useGeoDatabases,
+              var routing = config["routing"] as? [String: Any],
+              var rules = routing["rules"] as? [[String: Any]] else {
+            return
+        }
+
+        rules = rules.filter { rule in
+            let domains = rule["domain"] as? [String] ?? []
+            let ips = rule["ip"] as? [String] ?? []
+            let isGeo = domains.contains { $0.hasPrefix("geoip:") || $0.hasPrefix("geosite:") } ||
+                        ips.contains { $0.hasPrefix("geoip:") || $0.hasPrefix("geosite:") }
+            return !isGeo
+        }
+        routing["rules"] = rules
+        config["routing"] = routing
     }
 }
