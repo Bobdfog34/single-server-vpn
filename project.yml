@@ -11,12 +11,7 @@ settings:
     PROVISIONING_PROFILE_SPECIFIER: ""
     DEVELOPMENT_TEAM: ""
     SWIFT_VERSION: "5.0"
-    GENERATE_INFOPLIST_FILE: YES
-    MARKETING_VERSION: "1.1.1"
-    CURRENT_PROJECT_VERSION: "3"
-    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    INFOPLIST_KEY_UILaunchScreen_Generation: YES
-    INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+    GENERATE_INFOPLIST_FILE: NO
     TARGETED_DEVICE_FAMILY: "1,2"
     ENABLE_BITCODE: NO
     COMPILER_INDEX_STORE_ENABLE: NO
@@ -31,13 +26,12 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.singleserver.vpn
-        INFOPLIST_KEY_CFBundleDisplayName: Single Server VPN
     sources:
       - path: Sources/App
       - path: Sources/Shared
     resources:
       - path: Sources/Shared/Resources
-      - path: Resources/Assets.xcassets
+      - path: Resources/AppIcon.png
     entitlements:
       path: Sources/App/SingleServerVPN.entitlements
       properties:
@@ -45,6 +39,8 @@ targets:
           - $(APP_GROUP_ID)
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
+    info:
+      path: Sources/App/Info.plist
     dependencies:
       - target: SingleServerVPNExtension
         embed: true
@@ -73,8 +69,8 @@ targets:
       path: Sources/PacketTunnel/Info.plist
       properties:
         CFBundleDisplayName: Single Server VPN Tunnel
-        CFBundleShortVersionString: "1.1.1"
-        CFBundleVersion: "3"
+        CFBundleShortVersionString: "1.1.2"
+        CFBundleVersion: "4"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
