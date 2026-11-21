@@ -47,7 +47,6 @@ targets:
     dependencies:
       - target: SingleServerVPNExtension
         embed: true
-      - package: SwiftyXrayKit
   SingleServerVPNExtension:
     type: app-extension
     platform: iOS
