@@ -49,6 +49,8 @@ targets:
           set -e
           cp "$SRCROOT/Resources/AppIcon.png" "$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/AppIcon.png"
           PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 1.1.2" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion 4" "$PLIST"
           /usr/libexec/PlistBuddy -c "Delete :CFBundleIconFile" "$PLIST" >/dev/null 2>&1 || true
           /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon.png" "$PLIST"
           for KEY in CFBundleIcons "CFBundleIcons~ipad"; do
