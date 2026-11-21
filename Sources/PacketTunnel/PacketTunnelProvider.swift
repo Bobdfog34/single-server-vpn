@@ -21,7 +21,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider {
         let preferences = VPNConfigurationStore.loadPreferences()
         let profiles = VPNConfigurationStore.loadProfiles()
         let activeProfile = VPNConfigurationStore.activeProfile(preferences: preferences, profiles: profiles)
-        let configJSON = activeProfile?.configJSON ?? EmbeddedConfig.string
+        let configJSON = activeProfile?.configJSON ?? EmbeddedConfig.string ?? ""
 
         TunnelDiagnostics.log("Start: profile=\(activeProfile?.name ?? "embedded"), sniffing=\(preferences.sniffingEnabled), geo=\(preferences.useGeoDatabases)")
 
